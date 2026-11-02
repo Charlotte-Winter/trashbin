@@ -1,1 +1,49 @@
-placeholder
+// Erste Zeile MUSS ein Kommentar sein!
+try {
+  Services.obs.addObserver(function(win, topic) {
+    if (topic === "domwindowopened") {
+      win.addEventListener("DOMContentLoaded", function() {
+        if (win.document.documentElement.getAttribute("windowtype") === "navigator:browser") {
+          
+          // 1. Windows-Benutzernamen an die Adressleiste übergeben
+          let username = Services.env.get("USERNAME") || "user";
+          let identityBox = win.document.getElementById("identity-box");
+          if (identityBox) {
+            identityBox.setAttribute("data-username", username);
+          }
+
+          // 2. Live-Uhr in die TabsToolbar einfügen
+          let tabsBar = win.document.getElementById("TabsToolbar");
+          if (tabsBar && !win.document.getElementById("time_label")) {
+            let clock = win.document.createElement("div");
+            clock.id = "time_label";
+            
+            let updateClock = function() {
+              let now = new Date();
+              clock.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            };
+            
+            updateClock();
+            win.setInterval(updateClock, 1000);
+            tabsBar.appendChild(clock);
+          }
+
+          // 3. uBlock Origin verschieben (wartet dynamisch, bis uBlock bereit ist)
+          let moveUblock = function() {
+            let ublock = win.document.getElementById("ublock0_raymondhill_net-browser-action");
+            let target = win.document.getElementById("TabsToolbar-customization-target") || win.document.getElementById("TabsToolbar");
+
+            if (ublock && target) {
+              target.appendChild(ublock);
+            } else {
+              win.setTimeout(moveUblock, 300); // Versucht es alle 300ms erneut, bis uBlock geladen ist
+            }
+          };
+
+          moveUblock();
+
+        }
+      }, { once: true });
+    }
+  }, "domwindowopened", false);
+} catch(e) {}
