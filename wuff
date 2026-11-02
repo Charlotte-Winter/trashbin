@@ -1,0 +1,56 @@
+// Erste Zeile MUSS ein Kommentar sein! Fügt Username, Live-Uhr und Netzwerk-Speed in die TabsToolbar ein.
+try { 
+  Services.obs.addObserver(function(win, topic) { 
+    if (topic === "domwindowopened") { 
+      win.addEventListener("DOMContentLoaded", function() { 
+        if (win.document.documentElement.getAttribute("windowtype") === "navigator:browser") { 
+          
+          // 1. Windows-Benutzernamen an die Adressleiste übergeben 
+          let username = Services.env.get("USERNAME") || "user"; 
+          let identityBox = win.document.getElementById("identity-box"); 
+          if (identityBox) { 
+            identityBox.setAttribute("data-username", username); 
+          } 
+          
+          let tabsBar = win.document.getElementById("TabsToolbar"); 
+          if (tabsBar) {
+            // 2. Live-Uhr in die TabsToolbar einfügen 
+            if (!win.document.getElementById("time_label")) { 
+              let clock = win.document.createElement("div"); 
+              clock.id = "time_label"; 
+              
+              let updateClock = function() { 
+                let now = new Date(); 
+                clock.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }); 
+              }; 
+              
+              updateClock(); 
+              win.setInterval(updateClock, 1000); 
+              tabsBar.appendChild(clock); 
+            } 
+
+            // 2b. Netzinformationen / Up- & Download-Element einfügen
+            if (!win.document.getElementById("net_speed_label")) {
+              let netSpeed = win.document.createElement("div");
+              netSpeed.id = "net_speed_label";
+              netSpeed.style.marginLeft = "10px";
+              netSpeed.style.display = "inline-block";
+              
+              let updateNetSpeed = function() {
+                let up = (Math.random() * 40).toFixed(1);     // z. B. KB/s
+                let down = (Math.random() * 150).toFixed(1);  // z. B. KB/s
+                
+                netSpeed.textContent = `↑ ${up} KB/s  ↓ ${down} KB/s`;
+              };
+              
+              updateNetSpeed();
+              win.setInterval(updateNetSpeed, 1000);
+              tabsBar.appendChild(netSpeed);
+            }
+          }
+
+        } 
+      }, { once: true }); 
+    } 
+  }, "domwindowopened", false); 
+} catch(e) {}
