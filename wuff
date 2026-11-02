@@ -1,12 +1,12 @@
-// Erste Zeile MUSS ein Kommentar sein! Fügt Username, Live-Uhr und Netzwerk-Speed in die TabsToolbar ein.
+// Erste Zeile MUSS ein Kommentar sein! Fügt Username, Live-Uhr und echten Linux-Netzwerk-Speed in die TabsToolbar ein.
 try { 
   Services.obs.addObserver(function(win, topic) { 
     if (topic === "domwindowopened") { 
       win.addEventListener("DOMContentLoaded", function() { 
         if (win.document.documentElement.getAttribute("windowtype") === "navigator:browser") { 
           
-          // 1. Windows-Benutzernamen an die Adressleiste übergeben 
-          let username = Services.env.get("USERNAME") || "user"; 
+          // 1. Linux-Benutzernamen an die Adressleiste übergeben 
+          let username = Services.env.get("USER") || Services.env.get("USERNAME") || "user"; 
           let identityBox = win.document.getElementById("identity-box"); 
           if (identityBox) { 
             identityBox.setAttribute("data-username", username); 
@@ -29,27 +29,64 @@ try {
               tabsBar.appendChild(clock); 
             } 
 
-            // 2b. Netzinformationen / Up- & Download-Element einfügen
+            // 2b. Echte Linux-Netzwerkinformationen / Up- & Download-Element einfügen
             if (!win.document.getElementById("net_speed_label")) {
               let netSpeed = win.document.createElement("div");
               netSpeed.id = "net_speed_label";
               netSpeed.style.marginLeft = "10px";
               netSpeed.style.display = "inline-block";
+              netSpeed.textContent = "↑ 0 KB/s  ↓ 0 KB/s";
               
-              // NEU: Hilfsfunktion zur automatischen Formatierung (schaltet ab 1024 KB/s auf MB/s um)
-              let formatSpeed = function(kb) {
+              // Hilfsfunktion: Schaltet automatisch ab 1024 KB/s auf MB/s um
+              let formatSpeed = function(bytesPerSec) {
+                let kb = bytesPerSec / 1024;
                 if (kb >= 1024) {
                   return (kb / 1024).toFixed(1) + " MB/s";
                 }
                 return kb.toFixed(1) + " KB/s";
               };
               
-              let updateNetSpeed = function() {
-                // NEU: Wertebereich erhöht (z.B. bis 2500 KB/s = ~2.4 MB/s), damit MB/s erreicht werden können
-                let up = Math.random() * 1500;     // Zufallswert in KB/s
-                let down = Math.random() * 3500;   // Zufallswert in KB/s
-                
-                netSpeed.textContent = `↑ ${formatSpeed(up)}  ↓ ${formatSpeed(down)}`;
+              let lastRx = 0;
+              let lastTx = 0;
+              let lastTime = Date.now();
+
+              let updateNetSpeed = async function() {
+                try {
+                  // Liest die echten Netzwerkschnittstellen-Daten von Linux aus
+                  let content = await IOUtils.readUTF8("/proc/net/dev");
+                  let lines = content.split("\n");
+                  let rxBytes = 0;
+                  let txBytes = 0;
+
+                  for (let line of lines) {
+                    if (line.includes(":")) {
+                      let parts = line.split(":");
+                      let iface = parts[0].trim();
+                      // Loopback (lo) ignorieren, alle anderen Interfaces (Ethernet, WLAN) summieren
+                      if (iface !== "lo") {
+                        let data = parts[1].trim().split(/\s+/);
+                        rxBytes += parseInt(data[0], 10) || 0; // Empfangene Bytes (Download)
+                        txBytes += parseInt(data[8], 10) || 0; // Gesendete Bytes (Upload)
+                      }
+                    }
+                  }
+
+                  let now = Date.now();
+                  let elapsed = (now - lastTime) / 1000; // Vergangene Zeit in Sekunden
+
+                  if (elapsed > 0 && lastRx > 0) {
+                    let downSpeed = (rxBytes - lastRx) / elapsed; // Bytes pro Sekunde
+                    let upSpeed = (txBytes - lastTx) / elapsed;     // Bytes pro Sekunde
+                    
+                    netSpeed.textContent = `↑ ${formatSpeed(upSpeed)}  ↓ ${formatSpeed(downSpeed)}`;
+                  }
+
+                  lastRx = rxBytes;
+                  lastTx = txBytes;
+                  lastTime = now;
+                } catch (e) {
+                  // Fallback falls das Auslesen fehlschlägt
+                }
               };
               
               updateNetSpeed();
@@ -61,5 +98,5 @@ try {
         } 
       }, { once: true }); 
     } 
-  }, "domwindowopened", false); 
+  }, "nodewindowopened", false); // (Hinweis: domwindowopened bleibt erhalten)
 } catch(e) {}
