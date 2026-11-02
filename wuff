@@ -36,11 +36,20 @@ try {
               netSpeed.style.marginLeft = "10px";
               netSpeed.style.display = "inline-block";
               
+              // NEU: Hilfsfunktion zur automatischen Formatierung (schaltet ab 1024 KB/s auf MB/s um)
+              let formatSpeed = function(kb) {
+                if (kb >= 1024) {
+                  return (kb / 1024).toFixed(1) + " MB/s";
+                }
+                return kb.toFixed(1) + " KB/s";
+              };
+              
               let updateNetSpeed = function() {
-                let up = (Math.random() * 40).toFixed(1);     // z. B. KB/s
-                let down = (Math.random() * 150).toFixed(1);  // z. B. KB/s
+                // NEU: Wertebereich erhöht (z.B. bis 2500 KB/s = ~2.4 MB/s), damit MB/s erreicht werden können
+                let up = Math.random() * 1500;     // Zufallswert in KB/s
+                let down = Math.random() * 3500;   // Zufallswert in KB/s
                 
-                netSpeed.textContent = `↑ ${up} KB/s  ↓ ${down} KB/s`;
+                netSpeed.textContent = `↑ ${formatSpeed(up)}  ↓ ${formatSpeed(down)}`;
               };
               
               updateNetSpeed();
