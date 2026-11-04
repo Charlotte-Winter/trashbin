@@ -1,0 +1,1 @@
+echo -e '#!/bin/sh\nnvidia-settings -a "[gpu:0]/GPUFanControlState=1" -a "[fan:0]/GPUTargetFanSpeed=70" -a "[fan:1]/GPUTargetFanSpeed=70" -a "[gpu:0]/GPUGraphicsClockOffset[3]=-200" -a "[gpu:0]/GPUMemoryTransferRateOffset[3]=-300"' > ~/.config/autostart-fan.sh
